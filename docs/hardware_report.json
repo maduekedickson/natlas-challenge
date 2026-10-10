@@ -1,0 +1,30 @@
+{
+  "timestamp_utc": "2026-09-26T09:18:25.759208+00:00",
+  "software": {
+    "python_version": "3.12.10",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "torch": "2.14.0+cpu",
+    "transformers": "5.17.0",
+    "accelerate": "1.15.0"
+  },
+  "cpu": {
+    "processor": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+    "physical_cores": 10,
+    "logical_cores": 12,
+    "max_frequency_mhz": 1300.0
+  },
+  "memory": {
+    "total_gb": 15.65,
+    "available_gb": 0.35,
+    "used_percent": 97.8
+  },
+  "disk": {
+    "total_gb": 460.33,
+    "free_gb": 167.73,
+    "used_percent": 63.6
+  },
+  "gpu": {
+    "cuda_available": false,
+    "devices": []
+  }
+}

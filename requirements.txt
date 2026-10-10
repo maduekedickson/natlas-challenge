@@ -1,0 +1,22 @@
+torch
+transformers
+accelerate
+safetensors
+sentencepiece
+huggingface_hub
+python-dotenv
+psutil
+
+# PS3 (LoRA fine-tuning + evaluation)
+peft
+trl
+datasets
+
+# API (added once the service layer is built)
+fastapi
+uvicorn
+pydantic
+
+# Evaluation reporting
+pandas
+matplotlib

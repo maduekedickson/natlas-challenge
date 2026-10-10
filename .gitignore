@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.ipynb_checkpoints/
+
+*.safetensors
+*.bin
+training/output/
+
+*.zip
+
+# Internal planning docs, not part of the submission
+CLAUDE.md
+outline.md

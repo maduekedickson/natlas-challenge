@@ -1,0 +1,3 @@
+model,parse_success_rate,exact_match_rate,mean_precision,mean_recall,mean_f1
+base,0.9981,0.0135,0.6765,0.6774,0.6765
+adapted,1.0,0.9981,1.0,0.9997,0.9998
