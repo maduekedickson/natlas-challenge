@@ -112,10 +112,10 @@ def main() -> None:
     parser.add_argument("--train", default="data/train/train.jsonl")
     parser.add_argument("--output-dir", default="training/output/lora-adapter")
     parser.add_argument("--epochs", type=int, default=3)
-    parser.add_argument("--batch-size", type=int, default=4)
-    parser.add_argument("--grad-accum", type=int, default=4)
+    parser.add_argument("--batch-size", type=int, default=2)
+    parser.add_argument("--grad-accum", type=int, default=8)
     parser.add_argument("--lr", type=float, default=2e-4)
-    parser.add_argument("--max-length", type=int, default=1024)
+    parser.add_argument("--max-length", type=int, default=512)
     args = parser.parse_args()
 
     if not HF_TOKEN:
@@ -133,6 +133,10 @@ def main() -> None:
     )
     model = get_peft_model(model, LoraConfig(**LORA_CONFIG))
     model.print_trainable_parameters()
+    # Required for gradient checkpointing to work with a LoRA-wrapped model
+    # (the base model's own params are frozen, so without this no tensor in
+    # the graph has requires_grad=True and checkpointing silently no-ops).
+    model.enable_input_require_grads()
 
     raw_examples = load_jsonl(args.train)
     tokenized = [build_example(tokenizer, ex, args.max_length) for ex in raw_examples]
@@ -145,6 +149,8 @@ def main() -> None:
         gradient_accumulation_steps=args.grad_accum,
         learning_rate=args.lr,
         bf16=True,
+        gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         logging_steps=10,
         save_strategy="epoch",
         report_to=[],
