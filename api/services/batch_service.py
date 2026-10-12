@@ -14,6 +14,12 @@ from api.services.natlas_service import NAtlasService
 
 REPORT_COLUMN_CANDIDATES = ["report", "report_text", "text"]
 
+# Excel on Windows commonly exports CSV as cp1252 (or adds a UTF-8 BOM), not
+# plain UTF-8 -- e.g. "smart quotes" decode as 0x93/0x94 in cp1252, not valid
+# UTF-8. Try the common ones in order rather than failing on the first user
+# who opens a template in Excel and saves it.
+CSV_ENCODINGS_TO_TRY = ["utf-8-sig", "utf-8", "cp1252", "latin-1"]
+
 
 def find_report_column(columns: list[str]) -> str | None:
     lowered = {str(c).lower(): c for c in columns}
@@ -23,10 +29,21 @@ def find_report_column(columns: list[str]) -> str | None:
     return None
 
 
+def _read_csv_robust(file_bytes: bytes) -> pd.DataFrame:
+    last_error: Exception | None = None
+    for encoding in CSV_ENCODINGS_TO_TRY:
+        try:
+            return pd.read_csv(io.BytesIO(file_bytes), encoding=encoding)
+        except UnicodeError as e:
+            last_error = e
+            continue
+    raise last_error  # latin-1 can decode any byte, so this should be unreachable
+
+
 def process_csv(db: Session, file_bytes: bytes, *, adapter_version: str | None) -> dict:
     t0 = time.perf_counter()
     try:
-        df = pd.read_csv(io.BytesIO(file_bytes))
+        df = _read_csv_robust(file_bytes)
     except Exception as e:
         return {"error": f"Could not parse CSV: {e}"}
 

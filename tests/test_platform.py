@@ -164,6 +164,22 @@ def test_batch_valid_csv(client):
     assert body["failed"] == 0
 
 
+def test_batch_handles_cp1252_encoded_csv(client):
+    """Regression test: a CSV saved by Excel on Windows (cp1252, with 'smart
+    quotes' that aren't valid UTF-8) failed with a raw UnicodeDecodeError
+    instead of being read. Real example byte: 0x93 (left smart quote in
+    cp1252) is not a valid UTF-8 start byte."""
+    csv_text = 'report\n"we have “some” stock"\n'
+    csv_bytes = csv_text.encode("cp1252")
+    files = {"file": ("batch.csv", io.BytesIO(csv_bytes), "text/csv")}
+    r = client.post("/api/v1/batch", files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert "error" not in body
+    assert body["total_rows"] == 1
+    assert body["successful"] == 1
+
+
 def test_batch_missing_report_column(client):
     csv_content = "facility,reporter\nA,John\n"
     files = {"file": ("batch.csv", io.BytesIO(csv_content.encode()), "text/csv")}
