@@ -25,13 +25,21 @@ def analyze(request: AnalyzeRequest, db: Session = Depends(get_session)) -> Anal
 
     health = service.health()
     adapter_version = ADAPTER_VERSION if health.get("adapter_loaded") else None
-    report = report_service.create_report(
-        db,
-        report_text=request.report_text,
-        analysis_result=result,
-        model_name=health.get("model_name"),
-        adapter_version=adapter_version,
-        source="text",
-    )
-    result["report_id"] = report.id
+
+    report_id = None
+    try:
+        report = report_service.create_report(
+            db,
+            report_text=request.report_text,
+            analysis_result=result,
+            model_name=health.get("model_name"),
+            adapter_version=adapter_version,
+            source="text",
+        )
+        report_id = report.id
+    except Exception:
+        logger.exception("Failed to persist report -- returning the analysis result anyway")
+        db.rollback()
+
+    result["report_id"] = report_id
     return AnalyzeResponse(**result)

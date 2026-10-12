@@ -97,6 +97,31 @@ def test_invalid_analyze_request(client):
     assert r.status_code == 422
 
 
+def test_analyze_handles_non_numeric_quantity_without_crashing(client):
+    """Regression test: a real report ("...one malaria patient...") made the
+    heavily-fine-tuned model emit a word quantity instead of a digit, which
+    crashed response validation with a raw 500. NAtlasService now sanitizes
+    stock_items before returning them -- this confirms the fix end-to-end."""
+
+    class FakeWithWordQuantity(FakeNAtlasService):
+        def analyze(self, report_text: str, max_new_tokens: int = 256) -> dict:
+            return {
+                "raw_model_output": '{"stock_items": [{"item": "malaria patient", "quantity": "one"}]}',
+                "parsed_ok": True,
+                "generation_seconds": 0.01,
+                "facility_name": "FMCA Sabah",
+                "reporter_name": "Dixie",
+                "stock_items": [{"item": "malaria patient", "quantity": None, "unit": None, "status": None}],
+                "services_available": [],
+                "facility_status": None,
+            }
+
+    NAtlasService._instance = FakeWithWordQuantity()
+    r = client.post("/api/v1/analyze", json={"report_text": "we have one malaria patient here"})
+    assert r.status_code == 200
+    assert r.json()["stock_items"][0]["quantity"] is None
+
+
 def test_report_not_found(client):
     r = client.get("/api/v1/reports/999999")
     assert r.status_code == 404

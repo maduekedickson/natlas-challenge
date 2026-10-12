@@ -33,6 +33,60 @@ EXTRACTION_INSTRUCTION = (
 )
 
 
+def _as_str_or_none(value) -> str | None:
+    if value is None:
+        return None
+    return value if isinstance(value, str) else str(value)
+
+
+def _as_int_or_none(value) -> int | None:
+    if isinstance(value, bool) or value is None:
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(float(value.strip()))
+        except (ValueError, TypeError):
+            return None
+    return None
+
+
+def _sanitize_stock_items(items) -> list[dict]:
+    """The model is heavily fine-tuned on digit-quantity examples ("20 doses").
+    Free-text input with word quantities ("one patient") or other
+    off-distribution phrasing can make it emit a non-integer quantity, which
+    would otherwise crash response validation. Malformed entries (no usable
+    item name) are dropped rather than replaced with invented placeholder
+    data."""
+    if not isinstance(items, list):
+        return []
+    sanitized = []
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        item_name = it.get("item")
+        if not item_name or not isinstance(item_name, str):
+            continue
+        sanitized.append(
+            {
+                "item": item_name,
+                "quantity": _as_int_or_none(it.get("quantity")),
+                "unit": _as_str_or_none(it.get("unit")),
+                "status": _as_str_or_none(it.get("status")),
+            }
+        )
+    return sanitized
+
+
+def _sanitize_services(services) -> list[str]:
+    if not isinstance(services, list):
+        return []
+    return [_as_str_or_none(s) for s in services if s is not None]
+
+
 def _safe_parse_json(text: str) -> dict | None:
     text = text.strip()
     start = text.find("{")
@@ -128,11 +182,11 @@ class NAtlasService:
         if parsed:
             result.update(
                 {
-                    "facility_name": parsed.get("facility_name"),
-                    "reporter_name": parsed.get("reporter_name"),
-                    "stock_items": parsed.get("stock_items", []),
-                    "services_available": parsed.get("services_available", []),
-                    "facility_status": parsed.get("facility_status"),
+                    "facility_name": _as_str_or_none(parsed.get("facility_name")),
+                    "reporter_name": _as_str_or_none(parsed.get("reporter_name")),
+                    "stock_items": _sanitize_stock_items(parsed.get("stock_items", [])),
+                    "services_available": _sanitize_services(parsed.get("services_available", [])),
+                    "facility_status": _as_str_or_none(parsed.get("facility_status")),
                 }
             )
         return result
