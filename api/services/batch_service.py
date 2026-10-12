@@ -29,6 +29,21 @@ def find_report_column(columns: list[str]) -> str | None:
     return None
 
 
+def _format_stock_items(items: list[dict] | None) -> str:
+    if not items:
+        return ""
+    parts = []
+    for it in items:
+        qty, unit, status = it.get("quantity"), it.get("unit"), it.get("status")
+        qty_str = f"{qty} {unit}".strip() if qty is not None else "unknown qty"
+        parts.append(f"{it.get('item')}: {qty_str} ({status})" if status else f"{it.get('item')}: {qty_str}")
+    return "; ".join(parts)
+
+
+def _format_services(services: list[str] | None) -> str:
+    return ", ".join(services) if services else ""
+
+
 def _read_csv_robust(file_bytes: bytes) -> pd.DataFrame:
     last_error: Exception | None = None
     for encoding in CSV_ENCODINGS_TO_TRY:
@@ -95,7 +110,14 @@ def process_csv(
                 source="batch",
             )
             successes.append(
-                {"row": int(idx), "report_id": report.id, "facility": report.facility_name}
+                {
+                    "row": int(idx),
+                    "report_id": report.id,
+                    "facility": report.facility_name,
+                    "facility_status": result.get("facility_status"),
+                    "stock_items": _format_stock_items(result.get("stock_items")),
+                    "services_available": _format_services(result.get("services_available")),
+                }
             )
         except Exception as e:
             failures.append({"row": int(idx), "error": str(e)})

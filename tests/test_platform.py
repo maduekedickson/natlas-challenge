@@ -163,6 +163,13 @@ def test_batch_valid_csv(client):
     assert body["successful"] == 2
     assert body["failed"] == 0
 
+    # Regression: batch results previously omitted stock items / services,
+    # so the Batch Processing page couldn't show what was actually extracted.
+    first = body["successes"][0]
+    assert "stock_items" in first and "ORS" in first["stock_items"]
+    assert "services_available" in first and "antenatal care" in first["services_available"]
+    assert first["facility_status"] == "open"
+
 
 def test_batch_handles_cp1252_encoded_csv(client):
     """Regression test: a CSV saved by Excel on Windows (cp1252, with 'smart
