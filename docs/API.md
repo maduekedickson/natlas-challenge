@@ -1,6 +1,8 @@
-# API: N-ATLaS Health Report Extraction
+# API: N-ATLaS Health Intelligence Platform
 
-FastAPI service exposing LoRA-adapted N-ATLaS for structured extraction from free-text health facility reports. Source: `api/`.
+FastAPI service exposing LoRA-adapted N-ATLaS for structured extraction from free-text health facility reports, plus report persistence, trend analytics, batch processing, exports, and voice transcription. Source: `api/`.
+
+**No authentication in this version** — deliberately descoped for the current demo pass (see `docs/IMPLEMENTATION_PLAN.md`).
 
 ## Running it
 
@@ -55,14 +57,36 @@ Extracts structured facility/stock/service data from a free-text report.
   "facility_status": "open",
   "raw_model_output": "{...the raw JSON string the model generated...}",
   "parsed_ok": true,
-  "generation_seconds": 8.14
+  "generation_seconds": 8.14,
+  "report_id": 1
 }
 ```
 
 Field notes:
 - `parsed_ok`: `false` if the model's raw output couldn't be parsed as JSON — in that case the structured fields are `null`/empty but `raw_model_output` is still returned, so callers always have something to fall back to (never a silent failure).
 - `generation_seconds`: real measured latency for that single request (not batched) — included so integrators can plan for actual response times rather than assume.
+- `report_id`: the persisted row's ID (new) — use it with `GET /api/v1/reports/{id}` to retrieve it later.
 - Error responses: malformed/empty `report_text` → `422` (FastAPI/Pydantic validation). Inference failure → `500` with a generic message (`"Inference failed. See server logs."`) — internals are never leaked to the client.
+
+### `GET /api/v1/reports` / `GET /api/v1/reports/{id}` / `GET /api/v1/dashboard`
+
+List (filterable by `facility`), retrieve one report's full detail (original text, structured data, normalized stock items), or get aggregate dashboard stats. See `docs/DATABASE.md` for the underlying schema.
+
+### `GET /api/v1/analytics/*`
+
+`facilities`, `stock-items` (for populating filter dropdowns), `stock-trend?facility=...&item=...`, `status-trend?facility=...`, `reports-by-facility`, `commodity-frequency`, `stockouts`. Return `[]` rather than fabricated data when there isn't enough history yet.
+
+### `POST /api/v1/batch`
+
+Multipart CSV upload (`file`). Expects a `report`/`report_text`/`text` column. Reuses the same `/analyze` inference path per row; per-row failures are recorded, never abort the batch. Response: `{total_rows, successful, failed, processing_seconds, successes: [...], failures: [...]}`.
+
+### `GET /api/v1/exports/{reports|stock-items}.{csv|xlsx}`
+
+Optional `?facility=` filter. Report-level export keeps the full structured JSON as a column; stock-item-level export is one row per report×item.
+
+### `POST /api/v1/transcribe`
+
+Multipart audio upload (`file`). Returns `{"transcript": "..."}` via Whisper — **not N-ATLaS's own ASR**, see `docs/VOICE.md`. Callers are expected to let a human review/edit the transcript before passing it to `/analyze`; the API itself doesn't enforce that (the Streamlit voice page does, via its UI flow).
 
 ## For external integrators
 
