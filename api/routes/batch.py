@@ -11,4 +11,4 @@ router = APIRouter()
 @router.post("/batch")
 async def batch_process(file: UploadFile = File(...), db: Session = Depends(get_session)):
     contents = await file.read()
-    return process_csv(db, contents, adapter_version=ADAPTER_VERSION)
+    return process_csv(db, contents, adapter_version=ADAPTER_VERSION, filename=file.filename)

@@ -50,11 +50,18 @@ if st.button("Analyze", type="primary", disabled=not report_text.strip()):
         if result.get("report_id"):
             st.success(f"Saved as report #{result['report_id']}")
 
-        col1, col2, col3 = st.columns(3)
-        col1.metric("Facility", result.get("facility_name") or "—")
-        col2.metric("Reporter", result.get("reporter_name") or "—")
+        # st.metric() truncates long text with an ellipsis -- fine for the
+        # short status value, not for a facility name that can run long.
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("**Facility**")
+            st.write(result.get("facility_name") or "—")
+        with col2:
+            st.markdown("**Reporter**")
+            st.write(result.get("reporter_name") or "—")
+
         status = result.get("facility_status") or "—"
-        col3.metric("Status", status.upper() if status != "—" else "—")
+        st.metric("Status", status.upper() if status != "—" else "—")
 
         st.markdown("**Stock items**")
         stock_items = result.get("stock_items") or []

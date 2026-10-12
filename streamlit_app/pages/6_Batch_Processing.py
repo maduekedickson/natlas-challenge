@@ -17,7 +17,7 @@ st.code(
     language="text",
 )
 
-uploaded = st.file_uploader("Upload CSV", type=["csv"])
+uploaded = st.file_uploader("Upload CSV or Excel", type=["csv", "xlsx", "xls"])
 
 if uploaded and st.button("Process batch", type="primary"):
     with st.spinner("Processing batch — this runs real inference per row, may take a while..."):

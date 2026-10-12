@@ -40,12 +40,24 @@ def _read_csv_robust(file_bytes: bytes) -> pd.DataFrame:
     raise last_error  # latin-1 can decode any byte, so this should be unreachable
 
 
-def process_csv(db: Session, file_bytes: bytes, *, adapter_version: str | None) -> dict:
+def _read_uploaded_file(file_bytes: bytes, filename: str | None) -> pd.DataFrame:
+    """Dispatch on file extension. An .xlsx is a binary (zip-based) format --
+    no amount of text-encoding fallback can read it as CSV text, which is
+    what previously made Excel uploads fail with a confusing decode error."""
+    ext = (filename or "").rsplit(".", 1)[-1].lower() if filename and "." in filename else ""
+    if ext in ("xlsx", "xls"):
+        return pd.read_excel(io.BytesIO(file_bytes))
+    return _read_csv_robust(file_bytes)
+
+
+def process_csv(
+    db: Session, file_bytes: bytes, *, adapter_version: str | None, filename: str | None = None
+) -> dict:
     t0 = time.perf_counter()
     try:
-        df = _read_csv_robust(file_bytes)
+        df = _read_uploaded_file(file_bytes, filename)
     except Exception as e:
-        return {"error": f"Could not parse CSV: {e}"}
+        return {"error": f"Could not parse file: {e}"}
 
     if df.empty:
         return {"error": "CSV file is empty."}

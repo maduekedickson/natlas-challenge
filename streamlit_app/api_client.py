@@ -110,8 +110,10 @@ def stockouts() -> list[dict]:
     return r.json()
 
 
-def batch_process(csv_bytes: bytes, filename: str = "batch.csv") -> dict:
-    files = {"file": (filename, csv_bytes, "text/csv")}
+def batch_process(file_bytes: bytes, filename: str = "batch.csv") -> dict:
+    """filename's extension (.csv vs .xlsx/.xls) determines how the server
+    parses it -- content-type is left for requests/FastAPI to infer."""
+    files = {"file": (filename, file_bytes)}
     r = requests.post(f"{API_BASE_URL}/api/v1/batch", files=files, timeout=600)
     r.raise_for_status()
     return r.json()

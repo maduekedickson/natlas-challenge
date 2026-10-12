@@ -180,6 +180,33 @@ def test_batch_handles_cp1252_encoded_csv(client):
     assert body["successful"] == 1
 
 
+def test_batch_accepts_xlsx_upload(client):
+    """Regression test: uploading an actual Excel file previously hit the
+    CSV text parser (an .xlsx is a binary zip-based format, not text), which
+    failed with a confusing decode error. Filename extension now dispatches
+    to pd.read_excel() instead."""
+    import pandas as pd
+
+    df = pd.DataFrame({"facility": ["A"], "reporter": ["John"], "report": ["we have stock"]})
+    buf = io.BytesIO()
+    df.to_excel(buf, index=False, engine="openpyxl")
+    buf.seek(0)
+
+    files = {
+        "file": (
+            "batch.xlsx",
+            buf,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    }
+    r = client.post("/api/v1/batch", files=files)
+    assert r.status_code == 200
+    body = r.json()
+    assert "error" not in body
+    assert body["total_rows"] == 1
+    assert body["successful"] == 1
+
+
 def test_batch_missing_report_column(client):
     csv_content = "facility,reporter\nA,John\n"
     files = {"file": ("batch.csv", io.BytesIO(csv_content.encode()), "text/csv")}
