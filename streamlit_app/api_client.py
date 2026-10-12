@@ -119,9 +119,15 @@ def batch_process(file_bytes: bytes, filename: str = "batch.csv") -> dict:
     return r.json()
 
 
-def export_url(kind: str, fmt: str, facility: str | None = None) -> str:
-    """kind: 'reports' | 'stock-items'; fmt: 'csv' | 'xlsx'"""
-    url = f"{API_BASE_URL}/api/v1/exports/{kind}.{fmt}"
-    if facility:
-        url += f"?facility={facility}"
-    return url
+def export_bytes(kind: str, fmt: str, facility: str | None = None) -> bytes:
+    """kind: 'reports' | 'stock-items'; fmt: 'csv' | 'xlsx'.
+
+    Fetched server-side (Streamlit backend -> FastAPI, both on localhost in
+    the same Colab VM) rather than linking the browser directly to
+    localhost:8000 -- the browser runs on the viewer's own machine, where
+    "localhost" means something else entirely and nothing is listening.
+    """
+    params = {"facility": facility} if facility else {}
+    r = requests.get(f"{API_BASE_URL}/api/v1/exports/{kind}.{fmt}", params=params, timeout=30)
+    r.raise_for_status()
+    return r.content
