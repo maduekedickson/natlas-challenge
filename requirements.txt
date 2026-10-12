@@ -9,14 +9,24 @@ psutil
 
 # PS3 (LoRA fine-tuning + evaluation)
 peft
-trl
 datasets
 
-# API (added once the service layer is built)
+# API
 fastapi
 uvicorn
 pydantic
+python-multipart
 
-# Evaluation reporting
+# Database / persistence
+sqlalchemy
+
+# Reporting / exports
 pandas
 matplotlib
+openpyxl
+
+# Demo UI
+streamlit>=1.40
+
+# Voice input (generic speech-to-text, not N-ATLaS's own ASR -- see docs/VOICE.md)
+openai-whisper
